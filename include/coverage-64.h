@@ -192,3 +192,42 @@ inline u32 skim(const u64 *virgin, const u64 *current, const u64 *current_end) {
 
 #endif
 
+
+inline void build_new_cov_index(const afl_state_t *afl, const u8 *virgin_map,
+                                u64 **new_cov_bits, u32 **new_cov,
+                                u32 *new_cov_len) {
+  u64 *current = (u64 *)afl->fsrv.trace_bits;
+  u64 *virgin = (u64 *)virgin_map;
+  u32  i = ((afl->fsrv.real_map_size + 7) >> 3);
+
+  while (i--) {
+    if (unlikely(*current & *virgin)) {
+      (*new_cov_len)++;
+      // Realloc if needed
+      *new_cov_bits = afl_realloc((void**)new_cov_bits, *new_cov_len * sizeof(u64));
+      *new_cov = afl_realloc((void**)new_cov, *new_cov_len * sizeof(u32));
+      // Put the entry into the index
+      (*new_cov)[(*new_cov_len) - 1] = i;
+      (*new_cov_bits)[(*new_cov_len) - 1] = *current & *virgin;
+    }
+
+    current++;
+    virgin++;
+  }
+}
+
+inline u8 compare_new_cov_index(const afl_state_t *afl, const u64 *new_cov_bits,
+                                const u32 *new_cov, u32 new_cov_len) {
+  u64 *trace_bits_64 = (u64 *)afl->fsrv.trace_bits;
+
+  for (u32 i = 0; i < new_cov_len; ++i) {
+    u32 trace_index = new_cov[i];
+    u64 new_bits = new_cov_bits[i];
+    u64 trace_bits = trace_bits_64[trace_index];
+
+    // Check if the new coverage bits are present in the last trace
+    if ((new_bits & trace_bits) != new_bits) { return 0; }
+  }
+
+  return 1;
+}

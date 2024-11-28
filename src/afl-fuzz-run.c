@@ -1026,12 +1026,18 @@ u8 trim_case(afl_state_t *afl, struct queue_entry *q, u8 *in_buf) {
       classify_counts(&afl->fsrv);
       cksum = hash64(afl->fsrv.trace_bits, afl->fsrv.map_size, HASH_CONST);
 
+      u8 still_has_new_bits = 0;
+      if (unlikely(afl->trim_goal_new)) {
+        still_has_new_bits = compare_new_cov_index(afl, q->new_cov_bits,
+                                                   q->new_cov, q->new_cov_len);
+      }
+
       /* If the deletion had no impact on the trace, make it permanent. This
          isn't perfect for variable-path inputs, but we're just making a
          best-effort pass, so it's not a big deal if we end up with false
          negatives every now and then. */
 
-      if (cksum == q->exec_cksum) {
+      if (cksum == q->exec_cksum || unlikely(still_has_new_bits)) {
 
         u32 move_tail = q->len - remove_pos - trim_avail;
 

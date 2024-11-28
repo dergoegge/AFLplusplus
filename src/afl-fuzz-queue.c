@@ -723,6 +723,9 @@ void add_to_queue(afl_state_t *afl, u8 *fname, u32 len, u8 passed_det) {
   q->mother = afl->queue_cur;
   q->weight = 1.0;
   q->perf_score = 100;
+  q->new_cov_bits = NULL;
+  q->new_cov = NULL;
+  q->new_cov_len = 0;
 
 #ifdef INTROSPECTION
   q->bitsmap_size = afl->bitsmap_size;
@@ -805,6 +808,9 @@ void destroy_queue(afl_state_t *afl) {
   for (i = 0; i < afl->queued_items; i++) {
 
     q = afl->queue_buf[i];
+    afl_free(q->new_cov_bits);
+    afl_free(q->new_cov);
+    q->new_cov_len = 0;
     ck_free(q->fname);
     ck_free(q->trace_mini);
     if (q->skipdet_e) {

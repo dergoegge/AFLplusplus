@@ -529,6 +529,7 @@ u8 trim_case_custom(afl_state_t *afl, struct queue_entry *q, u8 *in_buf,
 
     }
 
+    u8 still_has_new_bits = 0;
     if (likely(retlen)) {
 
       retlen = write_to_testcase(afl, (void **)&retbuf, retlen, 0);
@@ -547,11 +548,16 @@ u8 trim_case_custom(afl_state_t *afl, struct queue_entry *q, u8 *in_buf,
         classify_counts(&afl->fsrv);
         cksum = hash64(afl->fsrv.trace_bits, afl->fsrv.map_size, HASH_CONST);
 
+        if (afl->trim_goal_new && q->new_cov_bits) {
+          still_has_new_bits = compare_new_cov_index(
+              afl, q->new_cov_bits, q->new_cov, q->new_cov_len);
+        }
+
       }
 
     }
 
-    if (likely(retlen && cksum == q->exec_cksum)) {
+    if (likely(retlen && cksum == q->exec_cksum) || unlikely(still_has_new_bits)) {
 
       /* Let's save a clean trace, which will be needed by
          update_bitmap_score once we're done with the trimming stuff.

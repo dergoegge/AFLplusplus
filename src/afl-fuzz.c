@@ -327,6 +327,7 @@ static void usage(u8 *argv0, int more_help) {
       "AFL_DEBUG_CHILD: do not suppress stdout/stderr from target\n"
       "AFL_DISABLE_REDUNDANT: disable any queue item that is redundant\n"
       "AFL_DISABLE_TRIM: disable the trimming of test cases\n"
+      "AFL_TRIM_GOAL_NEW: Trim with the goal of retaining *new* coverage\n"
       "AFL_DUMB_FORKSRV: use fork server without feedback from target\n"
       "AFL_EXIT_WHEN_DONE: exit when all inputs are run and no new finds are found\n"
       "AFL_EXIT_ON_TIME: exit when no new coverage is found within the specified time\n"
@@ -1652,6 +1653,12 @@ int main(int argc, char **argv_orig, char **envp) {
   if (get_afl_env("AFL_DISABLE_TRIM") || get_afl_env("AFL_NO_TRIM")) {
 
     afl->disable_trim = 1;
+
+  }
+
+  if (get_afl_env("AFL_TRIM_GOAL_NEW")) {
+
+    afl->trim_goal_new = 1;
 
   }
 

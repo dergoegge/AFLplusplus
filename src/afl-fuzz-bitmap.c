@@ -485,6 +485,10 @@ u8 __attribute__((hot)) save_if_interesting(afl_state_t *afl, void *mem,
   s32 fd;
   u64 cksum = 0;
 
+  u64 *new_cov_bits = NULL;
+  u32 *new_cov = NULL;
+  u32  new_cov_len = 0;
+
   /* Update path frequency. */
 
   /* Generating a hash on every input is super expensive. Bad idea and should
@@ -509,18 +513,40 @@ u8 __attribute__((hot)) save_if_interesting(afl_state_t *afl, void *mem,
        future fuzzing, etc. */
 
     if (likely(classified)) {
+      if (unlikely(afl->trim_goal_new)) {
+        build_new_cov_index(afl, afl->virgin_bits, &new_cov_bits, &new_cov,
+                            &new_cov_len);
+      }
 
       new_bits = has_new_bits(afl, afl->virgin_bits);
 
     } else {
 
-      new_bits = has_new_bits_unclassified(afl, afl->virgin_bits);
+      if (unlikely(afl->trim_goal_new)) {
+
+        classify_counts(&afl->fsrv);
+        build_new_cov_index(afl, afl->virgin_bits, &new_cov_bits, &new_cov,
+                            &new_cov_len);
+        new_bits = has_new_bits(afl, afl->virgin_bits);
+
+      } else {
+
+        new_bits = has_new_bits_unclassified(afl, afl->virgin_bits);
+
+      }
 
       if (unlikely(new_bits)) { classified = 1; }
 
     }
 
     if (likely(!new_bits)) {
+
+      if (new_cov_bits) {
+
+        afl_free((void *)new_cov_bits);
+        afl_free((void *)new_cov);
+
+      }
 
       if (unlikely(afl->crash_mode)) { ++afl->total_crashes; }
       return 0;
@@ -567,6 +593,14 @@ u8 __attribute__((hot)) save_if_interesting(afl_state_t *afl, void *mem,
     }
 
     add_to_queue(afl, queue_fn, len, 0);
+
+    if (unlikely(new_cov_bits)) {
+
+      afl->queue_top->new_cov_bits = new_cov_bits;
+      afl->queue_top->new_cov = new_cov;
+      afl->queue_top->new_cov_len = new_cov_len;
+
+    }
 
     if (unlikely(afl->fuzz_mode) &&
         likely(afl->switch_fuzz_mode && !afl->non_instrumented_mode)) {

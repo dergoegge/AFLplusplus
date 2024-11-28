@@ -256,6 +256,9 @@ struct queue_entry {
   struct tainted     *taint;             /* Taint information from CmpLog    */
   struct skipdet_entry *skipdet_e;
 
+  u64 *new_cov_bits; /* New coverage discovered by this entry */
+  u32 *new_cov;      /* Index for new coverage into the bitmap */
+  u32  new_cov_len;  /* Length of index */
 };
 
 struct extra_data {
@@ -593,6 +596,7 @@ typedef struct afl_state {
       fixed_seed,                       /* do not reseed                    */
       fast_cal,                         /* Try to calibrate faster?         */
       disable_trim,                     /* Never trim in fuzz_one           */
+      trim_goal_new,          /* Try to retain *new* coverage when trimming */
       shmem_testcase_mode,              /* If sharedmem testcases are used  */
       expand_havoc,                /* perform expensive havoc after no find */
       cycle_schedules,                  /* cycle power schedules?           */
@@ -1198,6 +1202,10 @@ u8 *describe_op(afl_state_t *, u8, size_t);
 u8 save_if_interesting(afl_state_t *, void *, u32, u8);
 u8 has_new_bits(afl_state_t *, u8 *);
 u8 has_new_bits_unclassified(afl_state_t *, u8 *);
+
+void build_new_cov_index(const afl_state_t *, const u8 *, u64 **, u32 **,
+                         u32 *);
+u8   compare_new_cov_index(const afl_state_t *, const u64 *, const u32 *, u32);
 #ifndef AFL_SHOWMAP
 void classify_counts(afl_forkserver_t *);
 #endif
